@@ -1,12 +1,16 @@
 import cv2
 from deepface import DeepFace
-from path import file_path #My own filepath file with my exact filepath
+from images_path import image_file_path #My own filepath file with my exact filepath
+from log_path import log_path_csv
+from datetime import datetime
+import csv
+import os
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 #Window size
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 840)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 680)
 
 #Default Counter
 counter = 0
@@ -14,39 +18,94 @@ counter = 0
 #Default face_match status
 face_match = False
 
-#My own refrence image
-reference_img = cv2.imread(file_path)
+# #My own refrence image
+# reference_images = cv2.imread(image_file_path)
 
-#If the script cannot detected/load the refence image 
-if reference_img is None:
-    print(f"Error: Could not load reference image from {file_path}")
-    exit()
+# #If the script cannot detected/load the refence image 
+# if reference_images is None:
+#     print(f"Error: Could not load reference image from {image_file_path}")
+#     exit()
 
 
 def check_face(frame):
     global face_match
     try:
-        #Set the RGB colors of the frame and refrence image since its BGR and not RGB
+        #Convert the captured frame from BGR (OpenCV default) to RGB (DeepFace expects RGB)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        ref_rgb = cv2.cvtColor(reference_img, cv2.COLOR_BGR2RGB)
-        #Print shapes for debug
+        
+        #Reset match status before checking
+        face_match = False
+        
+        #Loop through each reference image loaded from your folder
+        for ref_img in reference_images:
+            #Skip this image if it failed to load
+            if ref_img is None:
+                continue
+            
+            #Convert the reference image from BGR to RGB
+            ref_rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+            
+            #Use DeepFace to compare the current frame to the reference image
+            result = DeepFace.verify(frame_rgb, ref_rgb, enforce_detection=False)
+            
+            #If a match is found, set face_match to True and stop checking further images
+            if result['verified']:
+                face_match = True   
+                break
+        
+        # Print the type and shape of the last reference image for debugging
+        print(type(ref_img), ref_img.shape if ref_img is not None else "None")
+        # #Print shapes for debug
         print("frame_rgb shape:", frame_rgb.shape)
         print("ref_rgb shape:", ref_rgb.shape)
 
-        #skip the exception and instead process the entire input image
-        result = DeepFace.verify(frame_rgb, ref_rgb, enforce_detection=False)
-        
+
+
         print(result) #Debug info
-        face_match = result['verified']
     #Error handeling
     except Exception as e:
         print("Error in DeepFace verification:", e)
         face_match = False
 
-        
+def log_attempt(match_status, log_path=log_path_csv):
+    timestamp = datetime.now()
+    file_exists = os.path.isfile(log_path)
+
+    with open(log_path, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        if not file_exists:
+            writer.writerow(["timestamp", "match"])
+        writer.writerow([timestamp, match_status])
+
+def load_all_images(folder_path):
+    images = [] #Empty list
+
+    #loop through every file in the specified folder
+    for filename in os.listdir(folder_path):
+        #only process files that end with .jpg or .png (image files)
+        if filename.endswith(".jpg") or filename.endswith(".png"):
+            #Build the full path to the image file
+            img_path = os.path.join(folder_path, filename)
+            #Load the image using OpenCV
+            img = cv2.imread(img_path)
+            #If the image loads successfully, add it to the list
+            if img is not None:
+                images.append(img)
+            else:
+                #If the image fails to load, print a warning
+                print(f"Warning: Could not load {img_path}")
+
+    #Return the list of all successfully loaded images
+    return images
+       
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+
+reference_images = load_all_images("images")
+if not reference_images:
+    print("Error: No reference images loaded from 'images' folder.")
+    exit()
 
 while True:
     #reads one frame from your video source
@@ -58,6 +117,8 @@ while True:
             try:
                 #face verification function with a copy of the current frame.
                 check_face(frame.copy())
+                log_attempt(face_match) #Log
+
             except ValueError:
                 pass
 
@@ -79,6 +140,7 @@ while True:
 
         if face_match:
             cv2.putText(frame, "MATCH!", (20,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255,0),3)
+
         else:
             cv2.putText(frame, "NO MATCH!", (20,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0,255),3)
 
@@ -88,6 +150,6 @@ while True:
     key = cv2.waitKey(1)
     if key == ord("q"):
         break
-
+    
 cap.release()
 cv2.destroyAllWindows()
