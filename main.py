@@ -1,6 +1,5 @@
 import cv2
 from deepface import DeepFace
-from images_path import image_file_path #My own filepath file with my exact filepath
 from log_path import log_path_csv
 from datetime import datetime
 import csv
@@ -153,3 +152,4 @@ while True:
     
 cap.release()
 cv2.destroyAllWindows()
+
