@@ -14,9 +14,6 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 900)
 #Default Counter
 counter = 0
 
-#Default face_match status
-face_match = False
-
 # #My own refrence image
 # reference_images = cv2.imread(image_file_path)
 
@@ -81,8 +78,8 @@ def log_attempt(match_status, log_path=log_path_csv):
     with open(log_path, 'a', newline='') as csvfile:
         writer = csv.writer(csvfile)
         if not file_exists:
-            writer.writerow(["timestamp", "match"])
-        writer.writerow([timestamp, match_status])
+            writer.writerow(["timestamp", "match", "distance"])
+        writer.writerow([timestamp, match_status, dist])
 
 def load_all_images(folder_path):
     images = [] #Empty list
@@ -132,7 +129,7 @@ while True:
                 pass
 
         counter += 1
-        #inside your while loop, after you get frame:
+        #inside while loop, after you get frame:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
