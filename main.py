@@ -8,8 +8,8 @@ import os
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 #Window size
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 840)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 680)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1680)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 900)
 
 #Default Counter
 counter = 0
@@ -34,12 +34,15 @@ def check_face(frame):
         
         #Reset match status before checking
         face_match = False
-        
+
+        best_distance = float('inf')
+
         #Loop through each reference image loaded from your folder
         for ref_img in reference_images:
             #Skip this image if it failed to load
             if ref_img is None:
                 continue
+
             
             #Convert the reference image from BGR to RGB
             ref_rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
@@ -47,6 +50,10 @@ def check_face(frame):
             #Use DeepFace to compare the current frame to the reference image
             result = DeepFace.verify(frame_rgb, ref_rgb, enforce_detection=False)
             
+            distance = result['distance']
+            print(f"Distance between faces: {distance}")
+            if distance < best_distance:
+                best_distance = distance
             #If a match is found, set face_match to True and stop checking further images
             if result['verified']:
                 face_match = True   
@@ -58,9 +65,10 @@ def check_face(frame):
         print("frame_rgb shape:", frame_rgb.shape)
         print("ref_rgb shape:", ref_rgb.shape)
 
-
-
         print(result) #Debug info
+        
+        return face_match, best_distance
+
     #Error handeling
     except Exception as e:
         print("Error in DeepFace verification:", e)
@@ -102,6 +110,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_fronta
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
 
 reference_images = load_all_images("images")
+
 if not reference_images:
     print("Error: No reference images loaded from 'images' folder.")
     exit()
@@ -115,8 +124,9 @@ while True:
         if counter % 30 == 0:
             try:
                 #face verification function with a copy of the current frame.
-                check_face(frame.copy())
-                log_attempt(face_match) #Log
+                match, dist = check_face(frame.copy())
+                log_attempt(match)
+
 
             except ValueError:
                 pass
@@ -137,11 +147,12 @@ while True:
                 #Draw rectangle around eyes
                 cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0, 255, 0), 2)
 
-        if face_match:
-            cv2.putText(frame, "MATCH!", (20,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255,0),3)
-
+        if match:
+            cv2.putText(frame, f"MATCH! Dist: {dist:.2f}", (0,80), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255,0),3)
         else:
-            cv2.putText(frame, "NO MATCH!", (20,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0,255),3)
+            cv2.putText(frame, f"NO MATCH! Dist: {dist:.2f}", (0,80), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0,255),3)
+
+
 
         cv2.imshow("video", frame)
 
@@ -152,4 +163,3 @@ while True:
     
 cap.release()
 cv2.destroyAllWindows()
-
