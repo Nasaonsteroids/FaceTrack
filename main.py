@@ -14,14 +14,6 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 900)
 #Default Counter
 counter = 0
 
-# #My own refrence image
-# reference_images = cv2.imread(image_file_path)
-
-# #If the script cannot detected/load the refence image 
-# if reference_images is None:
-#     print(f"Error: Could not load reference image from {image_file_path}")
-#     exit()
-
 
 def check_face(frame):
     global face_match
@@ -48,7 +40,6 @@ def check_face(frame):
             result = DeepFace.verify(frame_rgb, ref_rgb, enforce_detection=False)
             
             distance = result['distance']
-            print(f"Distance between faces: {distance}")
             if distance < best_distance:
                 best_distance = distance
             #If a match is found, set face_match to True and stop checking further images
@@ -58,12 +49,7 @@ def check_face(frame):
         
         # Print the type and shape of the last reference image for debugging
         print(type(ref_img), ref_img.shape if ref_img is not None else "None")
-        # #Print shapes for debug
-        print("frame_rgb shape:", frame_rgb.shape)
-        print("ref_rgb shape:", ref_rgb.shape)
-
-        print(result) #Debug info
-        
+        # #Print shapes for debug        
         return face_match, best_distance
 
     #Error handeling
@@ -150,12 +136,10 @@ while True:
             cv2.putText(frame, f"NO MATCH! Dist: {dist:.2f}", (0,80), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0,255),3)
 
 
-
         cv2.imshow("video", frame)
 
-
     key = cv2.waitKey(1)
-    if key == ord("q"):
+    if key == ord("q", "Q"):
         break
     
 cap.release()
