@@ -139,7 +139,7 @@ while True:
         cv2.imshow("video", frame)
 
     key = cv2.waitKey(1)
-    if key == ord("q", "Q"):
+    if key == ord("q"):
         break
     
 cap.release()
